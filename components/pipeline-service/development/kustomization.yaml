@@ -17,6 +17,13 @@ patches:
 #      kind: Deployment
 #      name: pipeline-metrics-exporter
 #      namespace: openshift-pipelines
+  - target:
+      kind: Subscription
+      group: operators.coreos.com
+      version: v1alpha1
+      name: openshift-pipelines-operator
+      namespace: openshift-operators
+    path: use-110-images.yaml
   - path: update-tekton-config-performance.yaml
     target:
       kind: TektonConfig
