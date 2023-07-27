@@ -1,0 +1,31 @@
+---
+apiVersion: operators.coreos.com/v1alpha1
+kind: Subscription
+metadata:
+  name: openshift-pipelines-operator
+  namespace: openshift-operators
+spec:
+  config:
+    env:
+      - name: IMAGE_PIPELINES_CONTROLLER
+        value: registry.redhat.io/openshift-pipelines/pipelines-resolvers-rhel8:v1.10.4-4
+      - name: IMAGE_PAC_PAC_CONTROLLER
+        value: registry.redhat.io/openshift-pipelines/pipelines-pipelines-as-code-rhel8:v1.10.4-1
+      - name: IMAGE_PAC_PAC_WEBHOOK
+        value: registry.redhat.io/openshift-pipelines/pipelines-pipelines-as-code-rhel8:v1.10.4-1
+      - name: IMAGE_PAC_PAC_WATCHER
+        value: registry.redhat.io/openshift-pipelines/pipelines-pipelines-as-code-rhel8:v1.10.4-1
+      - name: IMAGE_PIPELINES_ARG__ENTRYPOINT_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-entrypoint-rhel8:v1.10.4-4
+      - name: IMAGE_PIPELINES_ARG__NOP_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-nop-rhel8:v1.10.4-4
+      - name: IMAGE_PIPELINES_TEKTON_PIPELINES_CONTROLLER
+        value: registry.redhat.io/openshift-pipelines/pipelines-controller-rhel8:v1.10.4-3
+      - name: IMAGE_PIPELINES_WEBHOOK
+        value: registry.redhat.io/openshift-pipelines/pipelines-webhook-rhel8:v1.10.4-4
+      - name: IMAGE_PIPELINES_ARG__GIT_IMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.10.4-4
+      - name: IMAGE_ADDONS_PARAM_GITINITIMAGE
+        value: registry.redhat.io/openshift-pipelines/pipelines-git-init-rhel8:v1.10.4-4
+      - name: IMAGE_CHAINS_TEKTON_CHAINS_CONTROLLER
+        value: registry.redhat.io/openshift-pipelines/pipelines-chains-controller-rhel8:v1.10.4-1
