@@ -439,6 +439,7 @@ rules:
   - results
   - records
   - logs
+  - summary
   verbs:
   - get
   - list
@@ -932,6 +933,8 @@ data:
     S3_ACCESS_KEY_ID=
     S3_SECRET_ACCESS_KEY=
     S3_MULTI_PART_SIZE=5242880
+    GCS_BUCKET_NAME=
+    STORAGE_EMULATOR_HOST=
 kind: ConfigMap
 metadata:
   annotations:
@@ -1211,7 +1214,7 @@ spec:
       containers:
       - args:
         - -zap-log-level=6
-        image: quay.io/redhat-appstudio/pipeline-service-exporter:089f2e576d31759eca98f78a591deda2cb5f37d4
+        image: quay.io/redhat-appstudio/pipeline-service-exporter:c42b1b9defaa61937765610ab188b9e0552cae23
         name: pipeline-metrics-exporter
         ports:
         - containerPort: 9117
@@ -1335,7 +1338,7 @@ spec:
             secretKeyRef:
               key: db.name
               name: tekton-results-database
-        image: quay.io/redhat-appstudio/tekton-results-api:dd067cad783501dc87fdec7285ca62e573fd85e3
+        image: quay.io/redhat-appstudio/tekton-results-api:1c5b3054ffb52f172fda31587d7dfd88a9724c8f
         livenessProbe:
           httpGet:
             path: /healthz
@@ -1404,7 +1407,7 @@ spec:
             secretKeyRef:
               key: db.name
               name: tekton-results-database
-        image: quay.io/redhat-appstudio/tekton-results-migrator:dd067cad783501dc87fdec7285ca62e573fd85e3
+        image: quay.io/redhat-appstudio/tekton-results-migrator:1c5b3054ffb52f172fda31587d7dfd88a9724c8f
         name: migrator
         resources:
           limits:
@@ -1533,7 +1536,7 @@ spec:
           value: tekton-results-api-service.tekton-pipelines.svc.cluster.local:8080
         - name: AUTH_MODE
           value: token
-        image: quay.io/redhat-appstudio/tekton-results-watcher:dd067cad783501dc87fdec7285ca62e573fd85e3
+        image: quay.io/redhat-appstudio/tekton-results-watcher:1c5b3054ffb52f172fda31587d7dfd88a9724c8f
         name: watcher
         ports:
         - containerPort: 9090
@@ -1636,7 +1639,7 @@ metadata:
     argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
     argocd.argoproj.io/sync-options: SkipDryRunOnMissingResource=true
     argocd.argoproj.io/sync-wave: "1"
-  name: tekton-chains-signing-secret
+  name: tekton-chains-public-key
   namespace: openshift-pipelines
 spec:
   template:
@@ -1656,30 +1659,9 @@ spec:
           namespace="openshift-pipelines"
           secret="signing-secrets"
 
-          cd /tmp
-
-          if [ "$(kubectl get secret "$secret" -n "$namespace" -o jsonpath='{.data}' --ignore-not-found --allow-missing-template-keys)" != "" ]; then
-            echo "Signing secret exists and is non-empty."
-          else
-            # Delete secret/signing-secrets if already exists since by default cosign creates immutable secrets
-            kubectl delete secrets "$secret" -n "$namespace" --ignore-not-found=true
-
-            # To make this run conveniently without user input let's create a random password
-            RANDOM_PASS=$( openssl rand -base64 30 )
-
-            # Generate the key pair secret directly in the cluster.
-            # The secret should be created as immutable.
-            echo "Generating k8s secret/$secret in $namespace with key-pair"
-            env COSIGN_PASSWORD=$RANDOM_PASS cosign generate-key-pair "k8s://$namespace/$secret"
-          fi
-
-          # If the secret is not marked as immutable, make it so.
-          if [ "$(kubectl get secret "$secret" -n "$namespace" -o jsonpath='{.immutable}')" != "true" ]; then
-            echo "Making secret immutable"
-            kubectl patch secret "$secret" -n "$namespace" --dry-run=client -o yaml \
-              --patch='{"immutable": true}' \
-            | kubectl apply -f -
-          fi
+          while [ "$(kubectl get secret "$secret" -n "$namespace" -o jsonpath='{.data}' --ignore-not-found --allow-missing-template-keys)" == "" ]; do
+            echo "Signing secret is empty."
+          done
 
           echo "Generating/updating the secret with the public key"
           kubectl create secret generic public-key \
@@ -1691,7 +1673,7 @@ spec:
             -o yaml | kubectl apply -f -
         image: quay.io/redhat-appstudio/appstudio-utils:dbbdd82734232e6289e8fbae5b4c858481a7c057
         imagePullPolicy: Always
-        name: chains-secret-generation
+        name: chains-public-key-generation
         resources:
           limits:
             cpu: 100m
@@ -1915,7 +1897,7 @@ spec:
     value: "false"
   pipeline:
     default-service-account: appstudio-pipeline
-    enable-api-fields: beta
+    enable-api-fields: alpha
     enable-bundles-resolver: true
     enable-cluster-resolver: true
     enable-git-resolver: true
